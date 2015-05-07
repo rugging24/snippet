@@ -1,4 +1,4 @@
-﻿select  distinct indrelid,bar.k,indname.*,bar.k2
+﻿select  distinct indrelid,bar.k combined_index_column,bar.k2 single_key_index_on_same_column,indname.*
 from 
 (select indrelid::regclass,array_agg(indkey)::text[] ind
 from pg_index
@@ -15,13 +15,13 @@ group by 1 ) foo
 	
 ) bar on true
 join lateral (
-		select array_agg(inx.indexrelid::regclass) indexnames, 
+		select array_agg(inx.indexrelid::regclass) composite_and_single_index_names, 
 		hstore(array_agg(inx.indexrelid::regclass::text),array_agg(idx_scan::text)) index_scans,
 		hstore(array_agg(inx.indexrelid::regclass::text),array_agg(idx_tup_read::text)) idx_tup_read,
 		hstore(array_agg(inx.indexrelid::regclass::text),array_agg(idx_tup_fetch::text)) idx_tup_fetch
 		from pg_index  inx
 		join pg_stat_user_indexes using(indexrelid) 
 		where foo.indrelid = indrelid::regclass
-		and indkey::text = bar.k2
+		and ( indkey::text = bar.k2 or indkey::text = bar.k )
 ) indname on true
 order by 2
