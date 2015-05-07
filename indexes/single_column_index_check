@@ -1,0 +1,33 @@
+﻿-- create extension hstore ;
+
+select indrelid tableName, bar.i  col_with_more_than_1_index,
+ bar.count no_of_index_on_column,indname.indexnames,indname.index_scans,
+ indname.idx_tup_read,indname.idx_tup_fetch
+from 
+(select indrelid::regclass,array_agg(indkey)::text[] ind
+from pg_index
+where indexrelid::regclass::text not like 'pg_%'
+group by 1 ) foo
+left join lateral(
+	select i,count(i) from unnest(ind) i
+	where i = any(ind)
+	group by i
+	having count(i) > 1
+) bar on true
+join lateral (
+		select array_agg(inx.indexrelid::regclass) indexnames, 
+		hstore(array_agg(inx.indexrelid::regclass::text),array_agg(idx_scan::text)) index_scans,
+		hstore(array_agg(inx.indexrelid::regclass::text),array_agg(idx_tup_read::text)) idx_tup_read,
+		hstore(array_agg(inx.indexrelid::regclass::text),array_agg(idx_tup_fetch::text)) idx_tup_fetch
+		from pg_index  inx
+		join pg_stat_user_indexes using(indexrelid) 
+		where foo.indrelid = indrelid::regclass
+		and indkey::text = bar.i
+) indname on true
+where ind && string_to_array(replace(array_to_string( ind,','),' ',','),',') ;
+ 
+
+
+
+
+

@@ -1,0 +1,27 @@
+﻿select  distinct indrelid,bar.k,indname.*,bar.k2
+from 
+(select indrelid::regclass,array_agg(indkey)::text[] ind
+from pg_index
+where indexrelid::regclass::text not like 'pg_%'
+group by 1 ) foo
+ join lateral (
+	select t.k,t2.k2 from 
+	( select k from unnest(ind) k
+	where substring(k from '.\s.+') = k and
+	ind && string_to_array(k,' ') ) t
+	join lateral ( 
+	  select k2 from unnest(string_to_array(t.k,' ')) k2 where t.k ~ k2 
+	  ) t2 on true
+	
+) bar on true
+join lateral (
+		select array_agg(inx.indexrelid::regclass) indexnames, 
+		hstore(array_agg(inx.indexrelid::regclass::text),array_agg(idx_scan::text)) index_scans,
+		hstore(array_agg(inx.indexrelid::regclass::text),array_agg(idx_tup_read::text)) idx_tup_read,
+		hstore(array_agg(inx.indexrelid::regclass::text),array_agg(idx_tup_fetch::text)) idx_tup_fetch
+		from pg_index  inx
+		join pg_stat_user_indexes using(indexrelid) 
+		where foo.indrelid = indrelid::regclass
+		and indkey::text = bar.k2
+) indname on true
+order by 2
