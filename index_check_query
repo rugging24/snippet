@@ -1,4 +1,5 @@
-﻿select indrelid, ind,bar.i single_index, bar.count count_of_single_index,null as combined_indexes,null as possible_duplicates
+﻿select indrelid, ind,bar.i  index_columns,
+ bar.count no_of_index_on_column,null as combined_index_column,null as possible_duplicates
 from 
 (select indrelid::regclass,array_agg(indkey)::text[] ind
 from pg_index
@@ -14,7 +15,7 @@ where ind && string_to_array(replace(array_to_string( ind,','),' ',','),',')
 
 UNION
  
-select distinct indrelid, ind,null::text single_index, null::bigint no_of_count_single,baz.*
+select  indrelid, ind,null::text single_index, null::bigint no_of_count_single,baz.*
 from 
 (select indrelid::regclass,array_agg(indkey)::text[] ind
 from pg_index
