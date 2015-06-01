@@ -1,0 +1,20 @@
+load database
+     from      mysql://mysqluser@localhost:3306/otrs
+     into postgresql://otrs@localhost:5432/otrs
+
+-- run the following in mysql database to allow for passwordless access
+
+-- CREATE USER 'mysqluser'@'localhost' IDENTIFIED BY '';
+-- GRANT ALL PRIVILEGES ON *.* TO 'test'@'%' IDENTIFIED BY '';
+-- FLUSH PRIVILEGES;
+
+ WITH include drop, create tables, no truncate,
+      create indexes, reset sequences, foreign keys
+
+  SET maintenance_work_mem to '128MB', work_mem to '12MB', search_path to 'otrs'
+
+ CAST type datetime to timestamptz
+
+
+ BEFORE LOAD DO
+ $$ create schema if not exists otrs; $$;
