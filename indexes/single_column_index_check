@@ -24,7 +24,7 @@ join lateral (
 		where foo.indrelid = indrelid::regclass
 		and indkey::text = bar.i
 ) indname on true
-where ind && string_to_array(replace(array_to_string( ind,','),' ',','),',') ;
+where ind && string_to_array(replace(array_to_string( ind,','),' ',','),',') and bar.i is not null ;
  
 
 
