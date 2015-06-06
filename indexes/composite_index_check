@@ -8,4 +8,4 @@ from ind_agg
 join pg_stat_user_indexes b on b.relname = indrelid::text 
 where indkey <> ind and indkey ~ ind
 
--- select * from pg_stat_user_indexes
+
