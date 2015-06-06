@@ -1,27 +1,11 @@
-﻿select  distinct indrelid,bar.k combined_index_column,bar.k2 single_key_index_on_same_column,indname.*
-from 
-(select indrelid::regclass,array_agg(indkey)::text[] ind
+﻿with ind_agg as (
+select indrelid::regclass,indkey::text, unnest(string_to_array(indkey::text,' ')) ind
 from pg_index
 where indexrelid::regclass::text not like 'pg_%'
-group by 1 ) foo
- join lateral (
-	select t.k,t2.k2 from 
-	( select k from unnest(ind) k
-	where substring(k from '.\s.+') = k and
-	ind && string_to_array(k,' ') ) t
-	join lateral ( 
-	  select k2 from unnest(string_to_array(t.k,' ')) k2 where t.k ~ k2 
-	  ) t2 on true
-	
-) bar on true
-join lateral (
-		select array_agg(inx.indexrelid::regclass) composite_and_single_index_names, 
-		hstore(array_agg(inx.indexrelid::regclass::text),array_agg(idx_scan::text)) index_scans,
-		hstore(array_agg(inx.indexrelid::regclass::text),array_agg(idx_tup_read::text)) idx_tup_read,
-		hstore(array_agg(inx.indexrelid::regclass::text),array_agg(idx_tup_fetch::text)) idx_tup_fetch
-		from pg_index  inx
-		join pg_stat_user_indexes using(indexrelid) 
-		where foo.indrelid = indrelid::regclass
-		and ( indkey::text = bar.k2 or indkey::text = bar.k )
-) indname on true
-order by 2
+)
+select distinct indrelid,indkey,ind, idx_scan, idx_tup_read, idx_tup_fetch
+from ind_agg
+join pg_stat_user_indexes b on b.relname = indrelid::text 
+where indkey <> ind and indkey ~ ind
+
+-- select * from pg_stat_user_indexes
